@@ -1,29 +1,47 @@
 name: build-and-release-artefacts
 on:
-  push:
-    branches:
-      - auth-1250-build-monitoring-tools
+  workflow_call:
+    inputs:
+      src-dir:
+        required: true
+        type: string
+      zipname:
+        required: true
+        type: string
+    secrets:
+      AWS_DEPLOYER_ROLE:
+        required: true
+      SIGNING_PROFILE:
+        required: true
+      VERSIONED_ARTEFACT_BUCKET:
+        required: true
+      SIGNED_ARTEFACT_DESTINATION_BUCKET:
+        required: true
 
 jobs:
   build-alerts-lambda:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - name: Use Node.js 16.x
         uses: actions/setup-node@v1
         with:
           node-version: 16.13.0
+
       - name: Install dependencies
-        working-directory: alerts-src
-        run: yarn install
+        working-directory: ${{ inputs.src-dir }}
+        run: yarn install --prod
+
       - name: Build app
-        working-directory: alerts-src
+        working-directory: ${{ inputs.src-dir }}
         run: yarn build
-      - name: Upload Alerts Lambda Artefact
+
+      - name: Upload Lambda Artefact
         uses: actions/upload-artifact@v3
         with:
-          name: alerts.zip
-          path: dist/alerts.zip
+          name: ${{ inputs.zipname }}
+          path: dist/${{ inputs.zipname }}
           retention-days: 5
 
   release-alerts-lambda:
@@ -40,26 +58,32 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE }}
           role-session-name: github-actions-release-alerts-${{ github.run_id }}-${{ github.run_number }}
           aws-region: eu-west-2
+
       - name: Get alert lambda artefact
         uses: actions/download-artifact@v3
         with:
-          name: alerts.zip
+          name: ${{ inputs.zipname }}
+
       - name: Copy alerts ZIP to S3
         id: s3-source-artefact-copy
         env:
           SOURCE_BUCKET: ${{ secrets.VERSIONED_ARTEFACT_BUCKET }}
-        run: |          
-          VERSION=$(aws s3api put-object --bucket "${SOURCE_BUCKET}" --key di-monitoring-utils/alerts.zip --body alerts.zip --output json --query 'VersionId')
+          FILENAME: ${{ inputs.zipname }}
+          KEY: ${{ github.event.repository.name }}/${{ inputs.zipname }}
+        run: |
+          VERSION=$(aws s3api put-object --bucket "${SOURCE_BUCKET}" --key "${KEY}" --body "${FILENAME}" --output json --query 'VersionId')
           echo "::set-output name=artefact-version::${VERSION}"
+
       - name: Trigger AWS signer job
         env:
           SIGNING_PROFILE:  ${{ secrets.SIGNING_PROFILE }}
           SOURCE_BUCKET: ${{ secrets.VERSIONED_ARTEFACT_BUCKET }}
           DESTINATION_BUCKET: ${{ secrets.SIGNED_ARTEFACT_DESTINATION_BUCKET }}
-          FILENAME: di-monitoring-utils/alerts.zip
+          FILENAME: di-monitoring-utils/${{ inputs.zipname }}
           VERSION: ${{ steps.s3-source-artefact-copy.outputs.artefact-version }}
+          PREFIX: ${{ github.event.repository.name }}/${{ inputs.zipname }}/signed-
         run: |
           aws signer start-signing-job \
             --profile-name "${SIGNING_PROFILE}" \
             --source "s3={bucketName=${SOURCE_BUCKET},key=${FILENAME},version=${VERSION}}" \
-            --destination "s3={bucketName=${DESTINATION_BUCKET},prefix=signed-di-monitoring-utils-alerts-}"
+            --destination "s3={bucketName=${DESTINATION_BUCKET},prefix=${PREFIX}}"
