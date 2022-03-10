@@ -1,7 +1,6 @@
-const AWS = require("aws-sdk");
+const AWS = require("aws-sdk"); // eslint-disable-line node/no-unpublished-require
 
 const SSM = new AWS.SSM();
-const S3 = new AWS.S3();
 
 const getParameter = async (parameterName) => {
 

@@ -1,44 +1,44 @@
 const axios = require('axios');
 const { getParameter } = require("./aws");
 
-exports.handler = async function(event, context) {
+const handler = async function(event, context) { // eslint-disable-line no-unused-vars
     console.log("Alert lambda triggered");
     const slackHookUrl = await getParameter(process.env.DEPLOY_ENVIRONMENT+"-slack-hook-url");
     var snsMessage = JSON.parse(event.Records[0].Sns.Message);
 
-    if(JSON.stringify(snsMessage).includes("ElastiCache")) {
-        console.log("Create ElastiCache notification")
-        var fallback    = Object.keys(snsMessage)[0] + "for cluster: " + Object.values(snsMessage)[0];
-        var colorCode   = "#ff9966";
-        var title       = Object.values(snsMessage)[0] + "-notification";
-        var description = Object.keys(snsMessage)[0] + " for cluster: " + Object.values(snsMessage)[0];
-        var fields      = [{"title": "Status","value": "INFO","short": false}];
-    } else {
-        var colorCode = "#C70039";
-        if (snsMessage.NewStateValue === "OK") {
-            colorCode = "#36a64f"
+    function formatMessage(snsMessage) {
+        if(JSON.stringify(snsMessage).includes("ElastiCache")) {
+            return {
+                "attachments": [{
+                    "fallback": Object.keys(snsMessage)[0] + "for cluster: " + Object.values(snsMessage)[0],
+                    "color": "#ff9966",
+                    "title": Object.values(snsMessage)[0] + "-notification",
+                    "text": Object.keys(snsMessage)[0] + " for cluster: " + Object.values(snsMessage)[0],
+                    "fields": [{"title": "Status","value": "INFO","short": false}],
+                    "footer": "GOV.UK Sign In alert"
+                }]
+            };
+        } else {
+            return {
+                "attachments": [{
+                    "fallback": snsMessage.AlarmDescription,
+                    "color": snsMessage.NewStateValue === "OK" ? "#36a64f" : "#C70039",
+                    "title": snsMessage.AlarmName,
+                    "text": snsMessage.AlarmDescription,
+                    "fields": [{"title": "Status", "value": snsMessage.NewStateValue, "short": false}],
+                    "footer": "GOV.UK Sign In alert"
+                }]
+            };
         }
-        var fallback    = snsMessage.AlarmDescription;
-        var title       = snsMessage.AlarmName;
-        var description = snsMessage.AlarmDescription;
-        var fields      = [{"title": "Status", "value": snsMessage.NewStateValue, "short": false}];
     }
+
     var config = {
         method: 'post',
         url: slackHookUrl,
         headers: {
             'Content-Type': 'application/json'
         },
-        data : JSON.stringify({
-            "attachments": [{
-                "fallback": fallback,
-                "color": colorCode,
-                "title": title,
-                "text": description,
-                "fields": fields,
-                "footer": "GOV.UK Sign In alert"
-            }]
-        })
+        data : JSON.stringify(formatMessage(snsMessage))
     };
     console.log("Sending alert to slack");
     try {
@@ -48,3 +48,5 @@ exports.handler = async function(event, context) {
         console.log(error);
     }
 };
+
+module.exports = { handler }
