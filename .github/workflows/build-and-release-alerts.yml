@@ -1,0 +1,22 @@
+name: build-and-release-alerts-lambda
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - alerts-src/**
+
+jobs:
+  build-and-release-alerts-lambda:
+    uses: ./.github/workflows/build-and-release.yml
+    with:
+      src-dir: alerts-src
+      zipname: alerts.zip
+    secrets:
+      AWS_DEPLOYER_ROLE: ${{ secrets.AWS_DEPLOYER_ROLE }}
+      SIGNING_PROFILE: ${{ secrets.SIGNING_PROFILE }}
+      VERSIONED_ARTEFACT_BUCKET: ${{ secrets.VERSIONED_ARTEFACT_BUCKET }}
+      SIGNED_ARTEFACT_DESTINATION_BUCKET: ${{ secrets.SIGNED_ARTEFACT_DESTINATION_BUCKET }}
+    permissions:
+      id-token: write
+      contents: read

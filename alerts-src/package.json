@@ -6,6 +6,9 @@
   "dependencies": {
     "axios": "^0.26.0"
   },
+  "devDependencies": {
+    "aws-sdk": "^2.1090.0"
+  },
   "scripts": {
     "build": "mkdir -p ../dist && zip -r ../dist/alerts.zip ."
   }

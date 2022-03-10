@@ -1,0 +1,89 @@
+name: build-and-release-artefacts
+on:
+  workflow_call:
+    inputs:
+      src-dir:
+        required: true
+        type: string
+      zipname:
+        required: true
+        type: string
+    secrets:
+      AWS_DEPLOYER_ROLE:
+        required: true
+      SIGNING_PROFILE:
+        required: true
+      VERSIONED_ARTEFACT_BUCKET:
+        required: true
+      SIGNED_ARTEFACT_DESTINATION_BUCKET:
+        required: true
+
+jobs:
+  build-lambda:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.13.0
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.src-dir }}
+        run: yarn install --prod
+
+      - name: Build app
+        working-directory: ${{ inputs.src-dir }}
+        run: yarn build
+
+      - name: Upload Lambda Artefact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.zipname }}
+          path: dist/${{ inputs.zipname }}
+          retention-days: 5
+
+  release-lambda:
+    runs-on: ubuntu-latest
+    needs:
+      - build-lambda
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE }}
+          role-session-name: github-actions-release-lambda-${{ github.run_id }}-${{ github.run_number }}
+          aws-region: eu-west-2
+
+      - name: Get lambda artefact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.zipname }}
+
+      - name: Copy lambda ZIP to S3
+        id: s3-source-artefact-copy
+        env:
+          SOURCE_BUCKET: ${{ secrets.VERSIONED_ARTEFACT_BUCKET }}
+          FILENAME: ${{ inputs.zipname }}
+          KEY: ${{ github.event.repository.name }}/${{ inputs.zipname }}
+        run: |
+          VERSION=$(aws s3api put-object --bucket "${SOURCE_BUCKET}" --key "${KEY}" --body "${FILENAME}" --output json --query 'VersionId')
+          echo "::set-output name=artefact-version::${VERSION}"
+
+      - name: Trigger AWS signer job
+        env:
+          SIGNING_PROFILE:  ${{ secrets.SIGNING_PROFILE }}
+          SOURCE_BUCKET: ${{ secrets.VERSIONED_ARTEFACT_BUCKET }}
+          DESTINATION_BUCKET: ${{ secrets.SIGNED_ARTEFACT_DESTINATION_BUCKET }}
+          FILENAME: di-monitoring-utils/${{ inputs.zipname }}
+          VERSION: ${{ steps.s3-source-artefact-copy.outputs.artefact-version }}
+          PREFIX: ${{ github.event.repository.name }}/${{ inputs.zipname }}/signed-
+        run: |
+          aws signer start-signing-job \
+            --profile-name "${SIGNING_PROFILE}" \
+            --source "s3={bucketName=${SOURCE_BUCKET},key=${FILENAME},version=${VERSION}}" \
+            --destination "s3={bucketName=${DESTINATION_BUCKET},prefix=${PREFIX}}"
