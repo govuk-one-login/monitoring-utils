@@ -1,6 +1,6 @@
 const cronitor = require('cronitor')(process.env.CRONITOR_API_KEY);
 
-exports.handler = async function (event, context) {
+const handler = async function (event, context) { // eslint-disable-line no-unused-vars
     const monitorKey = process.env.CRONITOR_MONITOR_KEY;
     console.log("cronitor ping monitor " + monitorKey);
     const monitor = new cronitor.Monitor(monitorKey);
@@ -8,3 +8,5 @@ exports.handler = async function (event, context) {
         return "cronitor ping monitor " + monitorKey + " returns: " + response;
     });
 }
+
+module.exports = { handler }

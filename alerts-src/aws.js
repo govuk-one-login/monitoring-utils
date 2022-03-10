@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk");
+const AWS = require("aws-sdk"); // eslint-disable-line node/no-unpublished-require
 
 const SSM = new AWS.SSM();
 
