@@ -8,6 +8,9 @@ on:
       zipname:
         required: true
         type: string
+      version:
+        required: true
+        type: string
     secrets:
       AWS_DEPLOYER_ROLE:
         required: true
@@ -81,7 +84,7 @@ jobs:
           DESTINATION_BUCKET: ${{ secrets.SIGNED_ARTEFACT_DESTINATION_BUCKET }}
           FILENAME: di-monitoring-utils/${{ inputs.zipname }}
           VERSION: ${{ steps.s3-source-artefact-copy.outputs.artefact-version }}
-          PREFIX: ${{ github.event.repository.name }}/${{ inputs.zipname }}/signed-
+          PREFIX: ${{ github.event.repository.name }}/${{ inputs.zipname }}/signed-${{ inputs.version }}-
         run: |
           aws signer start-signing-job \
             --profile-name "${SIGNING_PROFILE}" \
