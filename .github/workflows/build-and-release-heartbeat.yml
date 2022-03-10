@@ -12,6 +12,7 @@ jobs:
     with:
       src-dir: heartbeat-src
       zipname: heartbeat.zip
+      version: ${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }}
     secrets:
       AWS_DEPLOYER_ROLE: ${{ secrets.AWS_DEPLOYER_ROLE }}
       SIGNING_PROFILE: ${{ secrets.SIGNING_PROFILE }}
