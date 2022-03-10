@@ -1,7 +1,6 @@
 const AWS = require("aws-sdk");
 
 const SSM = new AWS.SSM();
-const S3 = new AWS.S3();
 
 const getParameter = async (parameterName) => {
 
