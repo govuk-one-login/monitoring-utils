@@ -2,7 +2,7 @@ name: build-and-release-alerts-lambda
 on:
   push:
     branches:
-      - auth-1250-build-monitoring-tools
+      - main
     paths:
       - alerts-src/**
 

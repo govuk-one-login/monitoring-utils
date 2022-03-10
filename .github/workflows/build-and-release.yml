@@ -19,7 +19,7 @@ on:
         required: true
 
 jobs:
-  build-alerts-lambda:
+  build-lambda:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -44,10 +44,10 @@ jobs:
           path: dist/${{ inputs.zipname }}
           retention-days: 5
 
-  release-alerts-lambda:
+  release-lambda:
     runs-on: ubuntu-latest
     needs:
-      - build-alerts-lambda
+      - build-lambda
     permissions:
       id-token: write
       contents: read
@@ -56,15 +56,15 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOYER_ROLE }}
-          role-session-name: github-actions-release-alerts-${{ github.run_id }}-${{ github.run_number }}
+          role-session-name: github-actions-release-lambda-${{ github.run_id }}-${{ github.run_number }}
           aws-region: eu-west-2
 
-      - name: Get alert lambda artefact
+      - name: Get lambda artefact
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.zipname }}
 
-      - name: Copy alerts ZIP to S3
+      - name: Copy lambda ZIP to S3
         id: s3-source-artefact-copy
         env:
           SOURCE_BUCKET: ${{ secrets.VERSIONED_ARTEFACT_BUCKET }}
