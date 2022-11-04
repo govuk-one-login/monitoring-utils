@@ -2,6 +2,11 @@ const axios = require('axios');
 const { getParameter } = require("./aws");
 
 const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
+    var description = snsMessage.AlarmDescription.split('ACCOUNT:');
+    var account = snsMessage.AWSAccountId
+    if (description.length > 1) {
+        account = description[1];
+    }
     if(JSON.stringify(snsMessage).includes("ElastiCache")) {
         return {
             "attachments": [{
@@ -9,26 +14,40 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
                 "color": "#ff9966",
                 "title": Object.values(snsMessage)[0] + "-notification",
                 "text": Object.keys(snsMessage)[0] + " for cluster: " + Object.values(snsMessage)[0],
-                "fields": [{
+                "fields": [
+                    {
                     "title": "Status",
                     "value": "INFO",
                     "short": false
-                }],
+                    },
+                    {
+                        "title": "Account",
+                        "value": account,
+                        "short": false
+                    }
+                ],
                 "footer": snsMessageFooter
             }]
         };
     } else {
         return {
             "attachments": [{
-                "fallback": snsMessage.AlarmDescription,
+                "fallback": description[0],
                 "color": colorCode,
                 "title": snsMessage.AlarmName,
-                "text": snsMessage.AlarmDescription,
-                "fields": [{
+                "text": description[0],
+                "fields": [
+                    {
                     "title": "Status",
                     "value": snsMessage.NewStateValue,
                     "short": false
-                }],
+                    },
+                    {
+                        "title": "Account",
+                        "value": account,
+                        "short": false
+                    }
+                ],
                 "footer": snsMessageFooter
             }]
         };
