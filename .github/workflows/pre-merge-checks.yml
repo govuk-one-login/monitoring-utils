@@ -43,3 +43,22 @@ jobs:
       - name: Build app
         working-directory: heartbeat-src
         run: yarn build
+
+  check-slack-lambda:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.13.0
+      - name: Install dependencies
+        working-directory: slack-src
+        run: yarn install
+      - name: Run lint
+        working-directory: slack-src
+        run: yarn lint
+      - name: Build app
+        working-directory: slack-src
+        run: yarn build
+
