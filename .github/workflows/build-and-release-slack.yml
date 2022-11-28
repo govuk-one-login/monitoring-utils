@@ -1,4 +1,4 @@
-name: build-and-release-alerts-lambda
+name: build-and-release-slack-lambda
 on:
   push:
     branches:
@@ -7,7 +7,7 @@ on:
       - slack-src/**
 
 jobs:
-  build-and-release-alerts-lambda:
+  build-and-release-slack-lambda:
     uses: ./.github/workflows/build-and-release.yml
     with:
       src-dir: slack-src
