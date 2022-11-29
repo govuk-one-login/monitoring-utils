@@ -6,7 +6,7 @@ const client = new SSM();
 
 const getParameter = async (parameterName) => {
 
-  const result = await SSM.getParameter({
+  const result = await client.getParameter({
     Name: `${parameterName}`,
     WithDecryption: true,
   });
