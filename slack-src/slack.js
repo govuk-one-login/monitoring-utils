@@ -14,8 +14,8 @@ const handler = async function(event, context) { // eslint-disable-line no-unuse
     console.log("Sending alert to slack");
     try {
         const response = await fetch(slackHookUrl, config);
-        const json = await response.json();
-        console.log(JSON.stringify(json));
+        const message = await response.text();
+        console.log(message);
     } catch (error) {
         console.log(error);
     }
