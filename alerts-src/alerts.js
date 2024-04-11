@@ -67,16 +67,16 @@ const handler = async function(event, context) { // eslint-disable-line no-unuse
 
     var config = {
         method: 'post',
-        url: slackHookUrl,
         headers: {
             'Content-Type': 'application/json'
         },
-        data : JSON.stringify(formatMessage(snsMessage, colorCode, snsMessageFooter))
+        body : JSON.stringify(formatMessage(snsMessage, colorCode, snsMessageFooter))
     };
     console.log("Sending alert to slack");
     try {
-        const response = await axios(config);
-        console.log(JSON.stringify(response.data));
+        const response = await fetch(slackHookUrl, config);
+        const message = await response.text();
+        console.log(message);
     } catch (error) {
         console.log(error);
     }
